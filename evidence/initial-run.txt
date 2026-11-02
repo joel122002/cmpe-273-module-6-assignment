@@ -1,0 +1,27 @@
+=== Initial deployment state ===
+NAME                         READY   STATUS    RESTARTS        AGE    IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0               49s    10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-grwr8   1/1     Running   1 (2m57s ago)   5m2s   10.244.0.3   cmpe273-control-plane   <none>           <none>
+=== Service ===
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+inventory   ClusterIP   10.96.177.132   <none>        80/TCP    5m3s
+=== Service endpoints ===
+NAME        ENDPOINTS                         AGE
+inventory   10.244.0.3:8080,10.244.0.8:8080   5m3s
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+=== Client responses through http://inventory ===
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8

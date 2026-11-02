@@ -1,0 +1,16 @@
+=== Restore readiness on inventory-78fb67ddbb-bsndp ===
+pod/inventory-78fb67ddbb-bsndp condition met
+=== Both replicas are Ready and back in Service endpoints ===
+NAME                         READY   STATUS    RESTARTS        AGE     IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0               80s     10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-grwr8   1/1     Running   1 (3m28s ago)   5m33s   10.244.0.3   cmpe273-control-plane   <none>           <none>
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME        ENDPOINTS                         AGE
+inventory   10.244.0.3:8080,10.244.0.8:8080   5m33s
+=== Client responses through the stable Service name ===
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-bsndp

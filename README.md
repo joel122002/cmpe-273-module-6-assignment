@@ -1,38 +1,53 @@
-# Kubernetes Service Discovery, Readiness, and Recovery Lab
+# Kubernetes Inventory Service Lab
 
-This lab runs a tiny Inventory HTTP service with two replicas and a client that calls the stable Kubernetes Service DNS name `inventory`.
+This lab demonstrates Kubernetes Service discovery, readiness-based traffic routing, and Deployment recovery. It runs a small Inventory HTTP service with two replicas and a client Pod that calls `http://inventory/` using the Kubernetes Service DNS name.
 
 ## Architecture
 
 ```text
 inventory-client Pod
         |
-        | HTTP to http://inventory (Service DNS)
+        | HTTP GET http://inventory/
         v
 inventory Service (ClusterIP, port 80)
         |
-        +------> inventory Pod A:8080
-        +------> inventory Pod B:8080
+        +------> ready Inventory Pod A:8080
+        +------> ready Inventory Pod B:8080
 ```
 
-The Service selects Pods labeled `app: inventory` and only routes normal traffic to ready endpoints. Each response includes the serving Pod name. The readiness endpoint checks a local marker file; the liveness endpoint remains healthy when readiness is deliberately failed, so the Pod stays running.
+Each Inventory response includes the Pod name that served it. The readiness endpoint checks `/tmp/unready`; the liveness endpoint stays healthy during the readiness demonstration, so an unready Pod remains running while Kubernetes removes it from normal Service traffic.
 
-## Prerequisites
+## Requirements
 
-- A working Kubernetes cluster and `kubectl` configured for it (Minikube, kind, or Docker Desktop Kubernetes).
-- Docker or another way to build and load the image into the cluster. For a local Minikube/kind cluster, build with Docker and load the image as shown below.
+- Kubernetes cluster and `kubectl` (tested with WSL2, Docker Engine, kind, and Ubuntu).
+- Docker Engine available to kind.
+- `kind` and `kubectl` installed in the same environment where Docker runs.
 
-## Deploy
+### WSL2 setup used for this run
 
-From the repository root:
+Inside Ubuntu WSL2, install Docker Engine and enable it:
 
 ```sh
-docker build -t inventory-lab:1.0 .
-# For Minikube:
-minikube image load inventory-lab:1.0
-# For kind, use this instead:
-# kind load docker-image inventory-lab:1.0
+sudo apt-get update
+sudo apt-get install -y docker.io curl
+sudo systemctl enable --now docker
+```
 
+Install kind and kubectl (the versions used for the included evidence):
+
+```sh
+sudo curl -fsSLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+sudo chmod +x /usr/local/bin/kind
+sudo curl -fsSLo /usr/local/bin/kubectl https://dl.k8s.io/release/v1.37.2/bin/linux/amd64/kubectl
+sudo chmod +x /usr/local/bin/kubectl
+```
+
+Create the cluster and deploy from the repository directory (available in WSL under `/mnt/c/Users/<your-user>/Desktop/273`):
+
+```sh
+kind create cluster --name cmpe273
+docker build -t inventory-lab:1.0 .
+kind load docker-image inventory-lab:1.0 --name cmpe273
 kubectl apply -f k8s/
 kubectl rollout status deployment/inventory
 kubectl rollout status deployment/inventory-client
@@ -41,92 +56,137 @@ kubectl get service inventory
 kubectl get endpoints inventory
 ```
 
-Expected starting state: two `inventory` Pods report `1/1 Running`; the `inventory` Service has two endpoints; one client Pod is running.
+The included evidence was produced with Ubuntu 26.04 LTS on WSL2, Docker Engine 29.1.3, kind 0.33.0, Kubernetes 1.37.0, and kubectl 1.37.2.
 
 ## Show requests reaching both replicas
 
-Read the client log. Each line names the Inventory Pod that answered, and the client uses the Service name (not a Pod IP):
+The client continuously calls the Service DNS name. Check its logs:
 
 ```sh
 kubectl logs deployment/inventory-client --tail=20
 ```
 
-Capture the output in the evidence section below. Across repeated requests, both inventory Pod names should appear.
+The responses below name both replicas, confirming the client uses the Service and not individual Pod addresses.
 
 ## Readiness failure and recovery
 
-Choose one Inventory Pod and save its name:
+Choose an Inventory Pod and induce readiness failure by creating the marker file inside that Pod:
 
 ```sh
-$pod = kubectl get pods -l app=inventory -o jsonpath='{.items[0].metadata.name}'
-```
-
-Make its readiness check fail by creating the marker file inside that Pod. This does not stop the process, and `/health` continues to pass:
-
-```sh
-kubectl exec $pod -- touch /tmp/unready
-kubectl get pod $pod
+pod=$(kubectl get pods -l app=inventory -o jsonpath='{.items[0].metadata.name}')
+kubectl exec "$pod" -- touch /tmp/unready
+kubectl get pod "$pod"
 kubectl get endpoints inventory
-kubectl logs deployment/inventory-client --tail=20
+kubectl logs deployment/inventory-client --since=10s
 ```
 
-Wait for the probe interval (up to a few seconds). The chosen Pod should remain `Running` but become `0/1`; its address should disappear from the Service endpoints, and client output should contain only the other ready Pod name.
+After a few seconds, the Pod should still be `Running` but report `0/1`. Its endpoint disappears from the Service, and the client continues receiving responses from the remaining ready replica.
 
 Restore readiness:
 
 ```sh
-kubectl exec $pod -- rm /tmp/unready
-kubectl wait --for=condition=Ready pod/$pod --timeout=30s
+kubectl exec "$pod" -- rm /tmp/unready
+kubectl wait --for=condition=Ready "pod/$pod" --timeout=30s
 kubectl get endpoints inventory
-kubectl logs deployment/inventory-client --tail=20
+kubectl logs deployment/inventory-client --since=10s
 ```
 
-The Pod should become `1/1` again, return as a Service endpoint, and appear in subsequent client responses.
+The Pod returns to `1/1`, reappears as a Service endpoint, and receives traffic again.
 
 ## Pod deletion and replacement
 
-Record the current Pod names, delete one Inventory Pod, and observe its replacement:
+Delete one Inventory Pod and wait for the Deployment to restore two ready replicas:
 
 ```sh
-kubectl get pods -l app=inventory -o wide
-$old = kubectl get pods -l app=inventory -o jsonpath='{.items[0].metadata.name}'
-kubectl delete pod $old
-kubectl get pods -l app=inventory -w
-```
-
-Stop watching after the replacement reaches `Running` and `Ready` (Ctrl-C), then confirm:
-
-```sh
+old=$(kubectl get pods -l app=inventory -o jsonpath='{.items[0].metadata.name}')
+kubectl delete pod "$old"
+kubectl rollout status deployment/inventory --timeout=90s
 kubectl get pods -l app=inventory -o wide
 kubectl get service inventory
-kubectl logs deployment/inventory-client --tail=20
+kubectl logs deployment/inventory-client --since=20s
 ```
 
-The Deployment creates a Pod with a different generated name. The Service remains named `inventory`, and client requests continue through `http://inventory` as endpoints change.
+The Deployment creates a new Pod with a different generated name. The `inventory` Service remains unchanged, and the client continues receiving responses through `http://inventory/`.
 
 ## Evidence
 
-Paste real terminal output or add screenshots captured during your run. These sections are intentionally ready to fill with your cluster's output.
+The following captured terminal output is also saved as text files under [`evidence/`](evidence/). The screenshots requested for submission belong in `evidence/screenshots/`.
 
-### Both replicas receive requests
+### Both replicas and Service traffic
 
 ```text
-[Paste `kubectl get pods -l app=inventory` and client log output showing both Pod names here]
+NAME                         READY   STATUS    IP
+inventory-78fb67ddbb-bsndp   1/1     Running   10.244.0.8
+inventory-78fb67ddbb-grwr8   1/1     Running   10.244.0.3
+
+NAME        TYPE        CLUSTER-IP      PORT(S)
+inventory   ClusterIP   10.96.177.132  80/TCP
+
+NAME        ENDPOINTS
+inventory   10.244.0.3:8080,10.244.0.8:8080
+
+Client responses through http://inventory:
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-grwr8
 ```
 
-### Readiness failure and recovery
+### Readiness failure
 
 ```text
-[Paste output showing the selected Pod Running but 0/1, its removal from Service endpoints,
-client requests reaching only the other Pod, then Ready status and traffic returning here]
+=== Pod remains Running but is 0/1 ===
+NAME                         READY   STATUS
+inventory-78fb67ddbb-bsndp   0/1     Running
+
+=== Service has only the other ready endpoint ===
+NAME        ENDPOINTS
+inventory   10.244.0.3:8080
+
+Recent client responses:
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+```
+
+### Readiness recovery
+
+```text
+pod/inventory-78fb67ddbb-bsndp condition met
+
+NAME                         READY   STATUS
+inventory-78fb67ddbb-bsndp   1/1     Running
+inventory-78fb67ddbb-grwr8   1/1     Running
+
+NAME        ENDPOINTS
+inventory   10.244.0.3:8080,10.244.0.8:8080
+
+Client responses again include both replicas, including:
+inventory response from inventory-78fb67ddbb-bsndp
 ```
 
 ### Pod deletion and replacement
 
 ```text
-[Paste the old Pod name, deletion result, new Pod name, unchanged Service name, and continued client output here]
+=== Delete inventory-78fb67ddbb-grwr8 ===
+pod "inventory-78fb67ddbb-grwr8" deleted from default namespace
+deployment "inventory" successfully rolled out
+
+=== New two-pod state after replacement ===
+NAME                         READY   STATUS    AGE
+inventory-78fb67ddbb-bsndp   1/1     Running
+inventory-78fb67ddbb-qcnb2   1/1     Running
+
+=== Service name and endpoints after replacement ===
+NAME        TYPE        CLUSTER-IP      PORT(S)
+inventory   ClusterIP   10.96.177.132  80/TCP
+inventory   10.244.0.8:8080,10.244.0.9:8080
+
+Client responses continued through http://inventory, including:
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
 ```
 
 ## Reflection
 
-A stable Service name gives clients one dependable address even while the Pods behind it change. Kubernetes updates the Service's endpoints as Pods become ready, fail readiness, or are replaced. Clients can keep calling `http://inventory` without tracking Pod IP addresses or restarting when a Pod is recreated. This separation makes recovery routine and keeps application configuration simpler.
+A stable Service name gives clients one dependable address even while the Pods behind it change. Kubernetes updates the Service endpoints as Pods become ready, fail readiness, or are replaced. Clients can keep calling `http://inventory` without tracking Pod IP addresses or restarting when a Pod is recreated. This separation makes recovery routine and keeps application configuration simpler.

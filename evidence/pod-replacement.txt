@@ -1,0 +1,59 @@
+=== Before deletion ===
+NAME                         READY   STATUS    RESTARTS       AGE    IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0              113s   10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-grwr8   1/1     Running   1 (4m1s ago)   6m6s   10.244.0.3   cmpe273-control-plane   <none>           <none>
+=== Service name before deletion ===
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+inventory   ClusterIP   10.96.177.132   <none>        80/TCP    6m6s
+=== Delete inventory-78fb67ddbb-grwr8 ===
+pod "inventory-78fb67ddbb-grwr8" deleted from default namespace
+deployment "inventory" successfully rolled out
+=== New two-pod state after replacement ===
+NAME                         READY   STATUS    RESTARTS   AGE     IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0          2m30s   10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-qcnb2   1/1     Running   0          37s     10.244.0.9   cmpe273-control-plane   <none>           <none>
+=== Service name and endpoints after replacement ===
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+inventory   ClusterIP   10.96.177.132   <none>        80/TCP    6m44s
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME        ENDPOINTS                         AGE
+inventory   10.244.0.8:8080,10.244.0.9:8080   6m44s
+=== Client requests continue through http://inventory ===
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+=== New two-pod state after replacement ===
+NAME                         READY   STATUS    RESTARTS   AGE     IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0          2m45s   10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-qcnb2   1/1     Running   0          52s     10.244.0.9   cmpe273-control-plane   <none>           <none>
+=== Service name and endpoints after replacement ===
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+inventory   ClusterIP   10.96.177.132   <none>        80/TCP    6m59s
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME        ENDPOINTS                         AGE
+inventory   10.244.0.8:8080,10.244.0.9:8080   7m
+=== Client requests continue through http://inventory ===
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2
+inventory response from inventory-78fb67ddbb-bsndp
+inventory response from inventory-78fb67ddbb-qcnb2

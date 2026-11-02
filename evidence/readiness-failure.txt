@@ -1,0 +1,18 @@
+=== Before: both Inventory Pods are ready ===
+NAME                         READY   STATUS    RESTARTS        AGE     IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   1/1     Running   0               64s     10.244.0.8   cmpe273-control-plane   <none>           <none>
+inventory-78fb67ddbb-grwr8   1/1     Running   1 (3m12s ago)   5m17s   10.244.0.3   cmpe273-control-plane   <none>           <none>
+=== Induce readiness failure on inventory-78fb67ddbb-bsndp ===
+=== Pod remains Running but is 0/1 ===
+NAME                         READY   STATUS    RESTARTS   AGE   IP           NODE                    NOMINATED NODE   READINESS GATES
+inventory-78fb67ddbb-bsndp   0/1     Running   0          70s   10.244.0.8   cmpe273-control-plane   <none>           <none>
+=== Service now has only the other ready endpoint ===
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME        ENDPOINTS         AGE
+inventory   10.244.0.3:8080   5m23s
+=== Recent client responses via http://inventory ===
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
+inventory response from inventory-78fb67ddbb-grwr8
