@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-client
+  template:
+    metadata:
+      labels:
+        app: inventory-client
+    spec:
+      containers:
+        - name: client
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Client is calling http://inventory/ (Kubernetes Service DNS)"
+              while true; do
+                wget -qO- http://inventory/
+                sleep 2
+              done
